@@ -16,10 +16,25 @@ const weightSchema = new mongoose.Schema({
     type: Date,
     required: true,
   },
+  dateKey: {
+    type: String,
+    required: true,
+    index: true,
+  },
   createdAt: {
     type: Date,
     default: Date.now,
   },
 })
+
+weightSchema.index(
+  { userId: 1, dateKey: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      dateKey: { $type: 'string' },
+    },
+  },
+)
 
 module.exports = mongoose.model('Weight', weightSchema, 'bodyweights')

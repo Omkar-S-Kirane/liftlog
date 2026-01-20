@@ -7,6 +7,22 @@ function isValidDate(value) {
   return !Number.isNaN(date.getTime())
 }
 
+function toDateKey(value) {
+  const d = new Date(value)
+  return d.toISOString().slice(0, 10)
+}
+
+function normalizeToUtcMidnight(dateKey) {
+  return new Date(`${dateKey}T00:00:00.000Z`)
+}
+
+function dayRangeUtc(dateKey) {
+  const start = normalizeToUtcMidnight(dateKey)
+  const end = new Date(start)
+  end.setUTCDate(end.getUTCDate() + 1)
+  return { start, end }
+}
+
 async function createWeight(req, res) {
   try {
     const { weight, date } = req.body ?? {}
@@ -19,14 +35,30 @@ async function createWeight(req, res) {
       return res.status(400).json({ message: 'Date is required and must be a valid date' })
     }
 
+    const dateKey = toDateKey(date)
+    const { start, end } = dayRangeUtc(dateKey)
+    const normalizedDate = start
+
+    const existing = await Weight.findOne({
+      userId: req.user.id,
+      $or: [{ dateKey }, { date: { $gte: start, $lt: end } }],
+    })
+    if (existing) {
+      return res.status(409).json({ message: 'Weight entry already exists for this date' })
+    }
+
     const entry = await Weight.create({
       userId: req.user.id,
       weight: Number(weight),
-      date: new Date(date),
+      date: normalizedDate,
+      dateKey,
     })
 
     return res.status(201).json(entry)
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ message: 'Weight entry already exists for this date' })
+    }
     return res.status(500).json({ message: 'Failed to create weight entry' })
   }
 }
@@ -58,11 +90,32 @@ async function updateWeight(req, res) {
       return res.status(400).json({ message: 'Date must be a valid date' })
     }
 
+    let datePatch = {}
+    if (date !== undefined) {
+      const nextDateKey = toDateKey(date)
+
+      const { start, end } = dayRangeUtc(nextDateKey)
+      const conflict = await Weight.findOne({
+        _id: { $ne: new mongoose.Types.ObjectId(id) },
+        userId: req.user.id,
+        $or: [{ dateKey: nextDateKey }, { date: { $gte: start, $lt: end } }],
+      })
+
+      if (conflict) {
+        return res.status(409).json({ message: 'Weight entry already exists for this date' })
+      }
+
+      datePatch = {
+        date: start,
+        dateKey: nextDateKey,
+      }
+    }
+
     const updated = await Weight.findOneAndUpdate(
       { _id: id, userId: req.user.id },
       {
         ...(weight === undefined ? {} : { weight: Number(weight) }),
-        ...(date === undefined ? {} : { date: new Date(date) }),
+        ...datePatch,
       },
       { new: true },
     )
@@ -73,6 +126,9 @@ async function updateWeight(req, res) {
 
     return res.json(updated)
   } catch (error) {
+    if (error?.code === 11000) {
+      return res.status(409).json({ message: 'Weight entry already exists for this date' })
+    }
     return res.status(500).json({ message: 'Failed to update weight entry' })
   }
 }

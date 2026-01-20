@@ -18,6 +18,10 @@ type EditState = {
   date: string
 }
 
+function toDateKey(iso: string) {
+  return new Date(iso).toISOString().slice(0, 10)
+}
+
 function toInputDate(iso: string) {
   const d = new Date(iso)
   const yyyy = d.getFullYear()
@@ -85,6 +89,17 @@ export default function WeightTracker() {
     return !sortedEntries.some((e) => isSameLocalDay(e.date, t))
   }, [sortedEntries])
 
+  const reservedDateKeys = useMemo(() => {
+    const keys = sortedEntries.map((e) => toDateKey(e.date))
+    if (!edit) return keys
+
+    return keys.filter((k) => k !== edit.date)
+  }, [edit, sortedEntries])
+
+  function getApiMessage(err: unknown) {
+    return typeof (err as any)?.response?.data?.message === 'string' ? (err as any).response.data.message : null
+  }
+
   async function handleCreate(payload: BodyWeightCreatePayload) {
 
     const tempId = `temp_${Date.now()}`
@@ -104,9 +119,16 @@ export default function WeightTracker() {
       })
 
       setEntries((prev) => prev.map((e) => (e._id === tempId ? created : e)))
-      toast.success('Weight added')
+      toast.success('Weight added successfully')
     } catch (e) {
       setEntries((prev) => prev.filter((e) => e._id !== tempId))
+
+      const msg = getApiMessage(e)
+      if (msg === 'Weight entry already exists for this date') {
+        toast.error('Weight already exists for this date')
+        return
+      }
+
       toast.error('Failed to add weight', 'Please try again.')
     }
   }
@@ -136,9 +158,16 @@ export default function WeightTracker() {
         date: new Date(payload.date).toISOString(),
       })
       setEdit(null)
-      toast.success('Entry updated')
+      toast.success('Weight updated successfully')
     } catch (e) {
       setEntries(previous)
+
+      const msg = getApiMessage(e)
+      if (msg === 'Weight entry already exists for this date') {
+        toast.error('Weight already exists for this date')
+        return
+      }
+
       toast.error('Failed to update entry', 'Please try again.')
     }
   }
@@ -199,6 +228,7 @@ export default function WeightTracker() {
           <WeightForm
             mode={edit ? 'edit' : 'create'}
             initialValues={edit ? { weight: edit.weight, date: edit.date } : undefined}
+            existingDateKeys={reservedDateKeys}
             onSubmit={edit ? requestUpdate : handleCreate}
             onCancelEdit={edit ? () => setEdit(null) : undefined}
             onInvalidSubmit={(message) => toast.error('Validation error', message)}

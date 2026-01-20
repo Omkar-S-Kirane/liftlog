@@ -11,8 +11,10 @@
 .toast {
   border-radius: 14px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.16);
-  box-shadow: 0 16px 60px rgba(0, 0, 0, 0.18);
+  background: rgba(30, 41, 59, 0.86);
+  box-shadow: 0 18px 70px rgba(0, 0, 0, 0.25);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   padding: 12px;
 
   display: grid;
@@ -23,7 +25,7 @@
 }
 
 html[data-theme='dark'] .toast {
-  background: rgba(255, 255, 255, 0.10);
+  background: rgba(2, 6, 23, 0.86);
 }
 
 .toastLeaving {
@@ -85,14 +87,14 @@ html[data-theme='dark'] .toast {
 .title {
   margin: 0;
   font-size: 13px;
-  color: var(--text);
+  color: rgba(255, 255, 255, 0.95);
 }
 
 .message {
   margin: 0;
   font-size: 12px;
   line-height: 1.4;
-  color: var(--text-muted);
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .close {
@@ -100,8 +102,8 @@ html[data-theme='dark'] .toast {
   height: 32px;
   border-radius: 12px;
   border: 1px solid var(--border);
-  background: rgba(255, 255, 255, 0.10);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.92);
   cursor: pointer;
 }
 

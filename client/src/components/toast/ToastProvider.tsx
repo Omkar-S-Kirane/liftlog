@@ -11,6 +11,7 @@ export type Toast = {
   title: string
   message?: string
   durationMs: number
+  leaving?: boolean
 }
 
 type ToastContextValue = {
@@ -33,10 +34,26 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((x) => x.id !== id))
   }, [])
 
+  const dismiss = useCallback(
+    (id: string) => {
+      setToasts((prev) => {
+        const next = prev.map((t) => (t.id === id ? { ...t, leaving: true } : t))
+        return next
+      })
+
+      const existingTimer = timers.current.get(id)
+      if (existingTimer) window.clearTimeout(existingTimer)
+      timers.current.delete(id)
+
+      window.setTimeout(() => remove(id), 170)
+    },
+    [remove],
+  )
+
   const push = useCallback(
     (toast: { type: ToastType; title: string; message?: string; durationMs?: number }) => {
       const id = `t_${Date.now()}_${Math.random().toString(16).slice(2)}`
-      const durationMs = toast.durationMs ?? 3200
+      const durationMs = toast.durationMs ?? 3800
 
       const next: Toast = {
         id,
@@ -44,24 +61,25 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         title: toast.title,
         message: toast.message,
         durationMs,
+        leaving: false,
       }
 
       setToasts((prev) => [next, ...prev].slice(0, 5))
 
       const timeoutId = window.setTimeout(() => {
-        remove(id)
+        dismiss(id)
       }, durationMs)
 
       timers.current.set(id, timeoutId)
     },
-    [remove],
+    [dismiss],
   )
 
   const value = useMemo<ToastContextValue>(() => {
     return {
       push,
       success: (title, message) => push({ type: 'success', title, message }),
-      error: (title, message) => push({ type: 'error', title, message, durationMs: 4200 }),
+      error: (title, message) => push({ type: 'error', title, message, durationMs: 5200 }),
       info: (title, message) => push({ type: 'info', title, message }),
     }
   }, [push])
@@ -69,7 +87,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={value}>
       {children}
-      <ToastViewport toasts={toasts} onDismiss={remove} />
+      <ToastViewport toasts={toasts} onDismiss={dismiss} />
     </ToastContext.Provider>
   )
 }

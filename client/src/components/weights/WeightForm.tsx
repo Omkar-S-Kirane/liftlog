@@ -11,6 +11,7 @@ type WeightFormProps = {
     weight: number
     date: string
   }
+  existingDateKeys?: string[]
   onSubmit: (payload: BodyWeightCreatePayload) => Promise<void> | void
   onCancelEdit?: () => void
   onInvalidSubmit?: (message: string) => void
@@ -27,6 +28,7 @@ function todayAsInputValue() {
 export default function WeightForm({
   mode,
   initialValues,
+  existingDateKeys,
   onSubmit,
   onCancelEdit,
   onInvalidSubmit,
@@ -52,6 +54,11 @@ export default function WeightForm({
     const w = Number(weight)
     return Boolean(date) && !Number.isNaN(w) && w > 0
   }, [date, weight])
+
+  const isDuplicateDate = useMemo(() => {
+    if (!existingDateKeys || existingDateKeys.length === 0) return false
+    return existingDateKeys.includes(date)
+  }, [date, existingDateKeys])
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
@@ -118,12 +125,18 @@ export default function WeightForm({
             transition: 'background-color 220ms, border-color 220ms, color 220ms',
           }}
         />
+
+        {isDuplicateDate ? (
+          <p style={{ margin: 0, fontSize: 12, color: 'rgba(239, 68, 68, 0.95)' }}>
+            An entry for this date already exists
+          </p>
+        ) : null}
       </div>
 
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button
           type="submit"
-          disabled={!isValid || submitting}
+          disabled={!isValid || isDuplicateDate || submitting}
           style={{
             height: 40,
             padding: '0 14px',
