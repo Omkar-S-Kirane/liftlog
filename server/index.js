@@ -1,37 +1,30 @@
-const express = require("express");
-const mongoose = require("mongoose");
-const cors = require("cors");
-require("dotenv").config();
+const express = require('express')
+const cors = require('cors')
+require('dotenv').config()
 
-const app = express();
+const connectDB = require('./config/db')
+const healthRoutes = require('./routes/healthRoutes')
 
-/* ---------- Middlewares ---------- */
-app.use(cors());
-app.use(express.json());
+const app = express()
 
-/* ---------- Health Check ---------- */
-app.get("/", (req, res) => {
-  res.json({ message: "LiftLog API is running 🚀" });
-});
+app.use(cors())
+app.use(express.json())
 
-/* ---------- MongoDB Connection ---------- */
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
+app.use('/', healthRoutes)
 
-if (!MONGO_URI) {
-  console.error("❌ MONGO_URI is missing in .env");
-  process.exit(1);
+const PORT = process.env.PORT || 5000
+const MONGO_URI = process.env.MONGO_URI
+
+async function start() {
+  try {
+    await connectDB(MONGO_URI)
+    app.listen(PORT, () => {
+      console.log(`🚀 Server running on http://localhost:${PORT}`)
+    })
+  } catch (error) {
+    console.error('❌ Server startup error:', error && error.message ? error.message : error)
+    process.exit(1)
+  }
 }
 
-mongoose
-  .connect(MONGO_URI)
-  .then(() => {
-    console.log("✅ MongoDB connected");
-    app.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-    });
-  })
-  .catch((error) => {
-    console.error("❌ MongoDB connection error:", error.message);
-    process.exit(1);
-  });
+start()
