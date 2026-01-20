@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 
 import { COLORS } from '@/constants/colors'
 import { useTheme } from '@/context/ThemeContext'
+import ConfirmModal from '@/components/ConfirmModal'
+import { useToast } from '@/components/toast/ToastProvider'
 import { weightService } from '@/services/weightService'
 import type { BodyWeightCreatePayload, BodyWeightEntry } from '@/types/bodyWeight'
 
@@ -41,11 +43,13 @@ function todayIso() {
 export default function WeightTracker() {
   const { theme } = useTheme()
   const c = COLORS(theme)
+  const toast = useToast()
 
   const [entries, setEntries] = useState<BodyWeightEntry[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [edit, setEdit] = useState<EditState | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<BodyWeightEntry | null>(null)
+  const [pendingUpdate, setPendingUpdate] = useState<BodyWeightCreatePayload | null>(null)
 
   useEffect(() => {
     let mounted = true
@@ -58,7 +62,7 @@ export default function WeightTracker() {
         setEntries(data)
       } catch (e) {
         if (!mounted) return
-        setError('Failed to load weight entries.')
+        toast.error('Could not load weights', 'Please refresh and try again.')
       } finally {
         if (!mounted) return
         setLoading(false)
@@ -82,7 +86,6 @@ export default function WeightTracker() {
   }, [sortedEntries])
 
   async function handleCreate(payload: BodyWeightCreatePayload) {
-    setError(null)
 
     const tempId = `temp_${Date.now()}`
     const optimistic: BodyWeightEntry = {
@@ -101,15 +104,21 @@ export default function WeightTracker() {
       })
 
       setEntries((prev) => prev.map((e) => (e._id === tempId ? created : e)))
+      toast.success('Weight added')
     } catch (e) {
       setEntries((prev) => prev.filter((e) => e._id !== tempId))
-      setError('Failed to add weight entry.')
+      toast.error('Failed to add weight', 'Please try again.')
     }
   }
 
-  async function handleUpdate(payload: BodyWeightCreatePayload) {
+  function requestUpdate(payload: BodyWeightCreatePayload) {
     if (!edit) return
-    setError(null)
+
+    setPendingUpdate(payload)
+  }
+
+  async function performUpdate(payload: BodyWeightCreatePayload) {
+    if (!edit) return
 
     const previous = entries
 
@@ -127,27 +136,28 @@ export default function WeightTracker() {
         date: new Date(payload.date).toISOString(),
       })
       setEdit(null)
+      toast.success('Entry updated')
     } catch (e) {
       setEntries(previous)
-      setError('Failed to update weight entry.')
+      toast.error('Failed to update entry', 'Please try again.')
     }
   }
 
-  async function handleDelete(entry: BodyWeightEntry) {
-    const ok = window.confirm('Delete this entry?')
-    if (!ok) return
+  function requestDelete(entry: BodyWeightEntry) {
+    setPendingDelete(entry)
+  }
 
-    setError(null)
-
+  async function performDelete(entry: BodyWeightEntry) {
     const previous = entries
     setEntries((prev) => prev.filter((e) => e._id !== entry._id))
 
     try {
       await weightService.remove(entry._id)
       if (edit?.id === entry._id) setEdit(null)
+      toast.success('Entry deleted')
     } catch (e) {
       setEntries(previous)
-      setError('Failed to delete weight entry.')
+      toast.error('Failed to delete entry', 'Please try again.')
     }
   }
 
@@ -183,29 +193,15 @@ export default function WeightTracker() {
         </div>
       ) : null}
 
-      {error ? (
-        <div
-          style={{
-            border: `1px solid ${c.border}`,
-            background: theme === 'dark' ? 'rgba(248, 113, 113, 0.10)' : 'rgba(239, 68, 68, 0.08)',
-            borderRadius: 14,
-            padding: 12,
-            marginBottom: 14,
-            color: c.textPrimary,
-          }}
-        >
-          {error}
-        </div>
-      ) : null}
-
       <div className={styles.grid}>
         <div className={styles.card}>
           <p className={styles.cardTitle}>{edit ? 'Edit entry' : 'Add entry'}</p>
           <WeightForm
             mode={edit ? 'edit' : 'create'}
             initialValues={edit ? { weight: edit.weight, date: edit.date } : undefined}
-            onSubmit={edit ? handleUpdate : handleCreate}
+            onSubmit={edit ? requestUpdate : handleCreate}
             onCancelEdit={edit ? () => setEdit(null) : undefined}
+            onInvalidSubmit={(message) => toast.error('Validation error', message)}
           />
         </div>
 
@@ -226,11 +222,36 @@ export default function WeightTracker() {
             ) : sortedEntries.length === 0 ? (
               <p style={{ color: 'var(--text-muted)', margin: 0 }}>Add your first weigh-in to get started.</p>
             ) : (
-              <WeightTable entries={[...sortedEntries].reverse()} onEdit={startEdit} onDelete={handleDelete} />
+              <WeightTable entries={[...sortedEntries].reverse()} onEdit={startEdit} onDelete={requestDelete} />
             )}
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={Boolean(pendingDelete || pendingUpdate)}
+        title={pendingDelete ? 'Delete entry?' : 'Save changes?'}
+        description={pendingDelete ? 'This can’t be undone.' : 'This will update the selected entry.'}
+        confirmText={pendingDelete ? 'Delete' : 'Save'}
+        cancelText="Cancel"
+        tone={pendingDelete ? 'danger' : 'primary'}
+        onCancel={() => {
+          setPendingDelete(null)
+          setPendingUpdate(null)
+        }}
+        onConfirm={async () => {
+          if (pendingDelete) {
+            await performDelete(pendingDelete)
+            setPendingDelete(null)
+            return
+          }
+
+          if (pendingUpdate) {
+            await performUpdate(pendingUpdate)
+            setPendingUpdate(null)
+          }
+        }}
+      />
     </section>
   )
 }

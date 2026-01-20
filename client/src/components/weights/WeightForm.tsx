@@ -13,6 +13,7 @@ type WeightFormProps = {
   }
   onSubmit: (payload: BodyWeightCreatePayload) => Promise<void> | void
   onCancelEdit?: () => void
+  onInvalidSubmit?: (message: string) => void
 }
 
 function todayAsInputValue() {
@@ -23,7 +24,13 @@ function todayAsInputValue() {
   return `${yyyy}-${mm}-${dd}`
 }
 
-export default function WeightForm({ mode, initialValues, onSubmit, onCancelEdit }: WeightFormProps) {
+export default function WeightForm({
+  mode,
+  initialValues,
+  onSubmit,
+  onCancelEdit,
+  onInvalidSubmit,
+}: WeightFormProps) {
   const [weight, setWeight] = useState<string>('')
   const [date, setDate] = useState<string>(todayAsInputValue())
   const [submitting, setSubmitting] = useState(false)
@@ -48,7 +55,10 @@ export default function WeightForm({ mode, initialValues, onSubmit, onCancelEdit
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    if (!isValid) return
+    if (!isValid) {
+      onInvalidSubmit?.('Please enter a valid weight (> 0) and pick a date.')
+      return
+    }
 
     setSubmitting(true)
     try {
