@@ -14,6 +14,7 @@ type DeleteResponse = {
 
 const http = axios.create({
   baseURL: getApiBaseUrl(),
+  withCredentials: true,
 })
 
 export const weightService = {

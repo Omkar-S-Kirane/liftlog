@@ -20,6 +20,7 @@ async function createWeight(req, res) {
     }
 
     const entry = await Weight.create({
+      userId: req.user.id,
       weight: Number(weight),
       date: new Date(date),
     })
@@ -32,7 +33,7 @@ async function createWeight(req, res) {
 
 async function getWeights(req, res) {
   try {
-    const weights = await Weight.find({}).sort({ date: 1 })
+    const weights = await Weight.find({ userId: req.user.id }).sort({ date: 1 })
     return res.json(weights)
   } catch (error) {
     return res.status(500).json({ message: 'Failed to fetch weight entries' })
@@ -57,8 +58,8 @@ async function updateWeight(req, res) {
       return res.status(400).json({ message: 'Date must be a valid date' })
     }
 
-    const updated = await Weight.findByIdAndUpdate(
-      id,
+    const updated = await Weight.findOneAndUpdate(
+      { _id: id, userId: req.user.id },
       {
         ...(weight === undefined ? {} : { weight: Number(weight) }),
         ...(date === undefined ? {} : { date: new Date(date) }),
@@ -84,7 +85,7 @@ async function deleteWeight(req, res) {
       return res.status(400).json({ message: 'Invalid id' })
     }
 
-    const deleted = await Weight.findByIdAndDelete(id)
+    const deleted = await Weight.findOneAndDelete({ _id: id, userId: req.user.id })
 
     if (!deleted) {
       return res.status(404).json({ message: 'Weight entry not found' })

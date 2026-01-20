@@ -1,12 +1,15 @@
 import Home from '@/pages/Home'
 import ThemeToggle from '@/components/ThemeToggle'
+import { AuthProvider } from '@/context/AuthContext'
 import { ThemeProvider } from '@/context/ThemeContext'
 
 function App() {
   return (
     <ThemeProvider>
-      <ThemeToggle />
-      <Home />
+      <AuthProvider>
+        <ThemeToggle />
+        <Home />
+      </AuthProvider>
     </ThemeProvider>
   )
 }
