@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { FormEvent } from 'react'
 import styles from './AuthModal.module.css'
+import { getStrongPasswordMessage, isValidEmail } from '@/utils/validation'
 
 type Mode = 'login' | 'signup'
 
@@ -24,16 +25,44 @@ export default function AuthModal({
   const [mode, setMode] = useState<Mode>(initialMode)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [remember, setRemember] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [touched, setTouched] = useState({ email: false, password: false, confirmPassword: false })
 
   const title = useMemo(() => (mode === 'login' ? 'Welcome back' : 'Create your account'), [mode])
+
+  const emailNormalized = email.trim()
+  const emailError = useMemo(() => {
+    if (emailNormalized.length === 0) return 'Email is required.'
+    if (!isValidEmail(emailNormalized)) return 'Enter a valid email address.'
+    return null
+  }, [emailNormalized])
+
+  const passwordError = useMemo(() => {
+    return getStrongPasswordMessage(password)
+  }, [password])
+
+  const confirmPasswordError = useMemo(() => {
+    if (mode !== 'signup') return null
+    if (confirmPassword.length === 0) return 'Confirm your password.'
+    if (confirmPassword !== password) return 'Passwords do not match.'
+    return null
+  }, [confirmPassword, mode, password])
+
+  const canSubmit = useMemo(() => {
+    const baseValid = !emailError && !passwordError
+    if (!baseValid) return false
+    if (mode === 'signup') return !confirmPasswordError
+    return true
+  }, [confirmPasswordError, emailError, mode, passwordError])
 
   useEffect(() => {
     if (open) {
       setRendered(true)
       setClosing(false)
+      setMode(initialMode)
       return
     }
 
@@ -64,13 +93,20 @@ export default function AuthModal({
   async function handleSubmit(e: FormEvent) {
     e.preventDefault()
     setError(null)
+
+    setTouched({ email: true, password: true, confirmPassword: true })
+
+    if (!canSubmit) {
+      return
+    }
+
     setSubmitting(true)
 
     try {
       if (mode === 'login') {
-        await onLogin({ email, password, remember })
+        await onLogin({ email: emailNormalized, password, remember })
       } else {
-        await onSignup({ email, password, remember })
+        await onSignup({ email: emailNormalized, password, remember })
       }
 
       onClose()
@@ -128,8 +164,19 @@ export default function AuthModal({
               autoComplete={mode === 'login' ? 'email' : 'email'}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, email: true }))}
+              aria-invalid={touched.email || email.length > 0 ? Boolean(emailError) : undefined}
+              aria-describedby="email-msg"
               required
             />
+            <p
+              id="email-msg"
+              className={`${styles.fieldMessage} ${
+                touched.email || email.length > 0 ? styles.fieldMessageVisible : ''
+              } ${emailError ? styles.fieldMessageError : ''}`}
+            >
+              {touched.email || email.length > 0 ? emailError ?? '' : ''}
+            </p>
           </div>
 
           <div style={{ display: 'grid', gap: 6 }}>
@@ -143,10 +190,53 @@ export default function AuthModal({
               autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
+              onBlur={() => setTouched((t) => ({ ...t, password: true }))}
+              aria-invalid={touched.password || password.length > 0 ? Boolean(passwordError) : undefined}
+              aria-describedby="password-msg"
               required
               minLength={8}
             />
+            <p
+              id="password-msg"
+              className={`${styles.fieldMessage} ${
+                touched.password || password.length > 0 ? styles.fieldMessageVisible : ''
+              } ${passwordError ? styles.fieldMessageError : ''}`}
+            >
+              {touched.password || password.length > 0 ? passwordError ?? '' : ''}
+            </p>
           </div>
+
+          {mode === 'signup' ? (
+            <div style={{ display: 'grid', gap: 6 }}>
+              <label className={styles.label} htmlFor="confirmPassword">
+                Confirm Password
+              </label>
+              <input
+                id="confirmPassword"
+                className={styles.input}
+                type="password"
+                autoComplete="new-password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onBlur={() => setTouched((t) => ({ ...t, confirmPassword: true }))}
+                aria-invalid={
+                  touched.confirmPassword || confirmPassword.length > 0
+                    ? Boolean(confirmPasswordError)
+                    : undefined
+                }
+                aria-describedby="confirm-msg"
+                required
+              />
+              <p
+                id="confirm-msg"
+                className={`${styles.fieldMessage} ${
+                  touched.confirmPassword || confirmPassword.length > 0 ? styles.fieldMessageVisible : ''
+                } ${confirmPasswordError ? styles.fieldMessageError : ''}`}
+              >
+                {touched.confirmPassword || confirmPassword.length > 0 ? confirmPasswordError ?? '' : ''}
+              </p>
+            </div>
+          ) : null}
 
           <div className={styles.row}>
             <label className={styles.checkbox}>
@@ -162,7 +252,7 @@ export default function AuthModal({
 
           {error ? <p className={styles.error}>{error}</p> : null}
 
-          <button className={styles.primary} type="submit" disabled={submitting}>
+          <button className={styles.primary} type="submit" disabled={submitting || !canSubmit}>
             {submitting ? 'Please wait…' : mode === 'login' ? 'Log in' : 'Sign up'}
           </button>
 

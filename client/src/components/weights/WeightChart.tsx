@@ -66,7 +66,7 @@ export default function WeightChart({ entries }: WeightChartProps) {
               color: c.textPrimary,
             }}
             labelStyle={{ color: c.textSecondary }}
-            formatter={(value: number | string) => [`${value}`, 'Weight']}
+            formatter={(value) => [value == null ? '' : String(value), 'Weight']}
             labelFormatter={(label: string) => {
               const d = new Date(label)
               return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' })

@@ -92,7 +92,7 @@ html[data-theme='dark'] .modal {
 
 .title {
   margin: 0;
-  color: rgba(255, 255, 255, 0.92);
+  color: var(--text);
   font-size: 16px;
 }
 
@@ -100,9 +100,9 @@ html[data-theme='dark'] .modal {
   width: 36px;
   height: 36px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--text);
   cursor: pointer;
 }
 
@@ -116,16 +116,16 @@ html[data-theme='dark'] .modal {
 .tab {
   height: 38px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.06);
-  color: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.10);
+  color: var(--text-muted);
   cursor: pointer;
   transition: transform 120ms ease, background 180ms ease, color 180ms ease;
 }
 
 .tabActive {
-  background: rgba(255, 255, 255, 0.14);
-  color: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.18);
+  color: var(--text);
 }
 
 .form {
@@ -135,17 +135,25 @@ html[data-theme='dark'] .modal {
 
 .label {
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--text-muted);
 }
 
 .input {
   height: 42px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text);
   padding: 0 12px;
   outline: none;
+}
+
+html[data-theme='dark'] .input {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.input[aria-invalid='true'] {
+  border-color: rgba(248, 113, 113, 0.75);
 }
 
 .row {
@@ -160,32 +168,57 @@ html[data-theme='dark'] .modal {
   align-items: center;
   gap: 8px;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--text-muted);
 }
 
 .primary {
   height: 42px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid var(--border);
   background: rgba(79, 70, 229, 0.65);
   color: rgba(255, 255, 255, 0.95);
   cursor: pointer;
-  transition: transform 120ms ease, background 180ms ease;
+  transition: transform 120ms ease, background 180ms ease, opacity 180ms ease;
 }
 
 .primary:active {
   transform: scale(0.99);
 }
 
+.primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .helper {
   margin: 0;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--text-muted);
 }
 
 .error {
   margin: 0;
   font-size: 12px;
+  color: rgba(248, 113, 113, 0.95);
+}
+
+.fieldMessage {
+  margin: 0;
+  min-height: 18px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--text-muted);
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity 160ms ease, transform 160ms ease, color 160ms ease;
+}
+
+.fieldMessageVisible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.fieldMessageError {
   color: rgba(248, 113, 113, 0.95);
 }
 
