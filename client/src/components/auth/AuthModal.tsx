@@ -136,20 +136,19 @@ export default function AuthModal({
         </div>
 
         <div className={styles.tabs}>
-          <button
-            type="button"
-            className={`${styles.tab} ${mode === 'login' ? styles.tabActive : ''}`}
+          <label
+            className={styles.labelHeader}
             onClick={() => setMode('login')}
           >
             Log in
-          </button>
-          <button
+          </label>
+          {/* <button
             type="button"
             className={`${styles.tab} ${mode === 'signup' ? styles.tabActive : ''}`}
             onClick={() => setMode('signup')}
           >
             Sign up
-          </button>
+          </button> */}
         </div>
 
         <form className={styles.form} onSubmit={handleSubmit}>
