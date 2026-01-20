@@ -27,60 +27,63 @@ export default function Home() {
           {loading ? (
             <p style={{ margin: 0, color: 'var(--text-muted)' }}>Checking session…</p>
           ) : user ? (
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <span
-                style={{
-                  border: '1px solid var(--border)',
-                  background: 'var(--surface)',
-                  color: 'var(--text)',
-                  padding: '6px 10px',
-                  borderRadius: 999,
-                  fontSize: 13,
-                }}
-              >
-                {user.email}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+                width: '100%',
+                flexWrap: 'wrap',
+              }}
+            >
+              <span style={{ color: 'var(--text)', fontSize: 14 }}>
+                Hello {user.firstName ? user.firstName : ''}
               </span>
-              <button
-                type="button"
-                onClick={async () => {
-                  await logout()
-                  setAdminDashboardOpen(false)
-                  setAdminAccessOpen(false)
-                }}
-                style={{
-                  height: 34,
-                  padding: '0 12px',
-                  borderRadius: 10,
-                  border: '1px solid var(--border)',
-                  background: 'transparent',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                }}
-              >
-                Logout
-              </button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  if (user.isAdmin) {
-                    setAdminDashboardOpen(true)
-                    return
-                  }
-                  setAdminAccessOpen(true)
-                }}
-                style={{
-                  height: 34,
-                  padding: '0 12px',
-                  borderRadius: 10,
-                  border: '1px solid var(--border)',
-                  background: 'transparent',
-                  color: 'var(--text-muted)',
-                  cursor: 'pointer',
-                }}
-              >
-                Admin Access
-              </button>
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={async () => {
+                    await logout()
+                    setAdminDashboardOpen(false)
+                    setAdminAccessOpen(false)
+                  }}
+                  style={{
+                    height: 34,
+                    padding: '0 12px',
+                    borderRadius: 10,
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Logout
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (user.isAdmin) {
+                      setAdminDashboardOpen(true)
+                      return
+                    }
+                    setAdminAccessOpen(true)
+                  }}
+                  style={{
+                    height: 34,
+                    padding: '0 12px',
+                    borderRadius: 10,
+                    border: '1px solid var(--border)',
+                    background: 'transparent',
+                    color: 'var(--text-muted)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  Admin Access
+                </button>
+              </div>
             </div>
           ) : (
             <button

@@ -6,9 +6,10 @@ import type { AuthUser } from '@/services/authService'
 
 type AuthContextValue = {
   user: AuthUser | null
+  token: string | null
   loading: boolean
   login: (payload: { email: string; password: string; remember?: boolean }) => Promise<void>
-  signup: (payload: { email: string; password: string; remember?: boolean }) => Promise<void>
+  signup: (payload: { firstName: string; lastName: string; email: string; password: string; remember?: boolean }) => Promise<void>
   logout: () => Promise<void>
   refresh: () => Promise<void>
 }
@@ -17,14 +18,17 @@ const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null)
+  const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   const refresh = useCallback(async () => {
     try {
-      const me = await authService.me()
-      setUser(me)
+      const res = await authService.me()
+      setUser(res.user)
+      setToken(res.token ?? null)
     } catch {
       setUser(null)
+      setToken(null)
     }
   }, [])
 
@@ -47,30 +51,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [refresh])
 
   const login = useCallback(async (payload: { email: string; password: string; remember?: boolean }) => {
-    const u = await authService.login(payload)
-    setUser(u)
+    const res = await authService.login(payload)
+    setUser(res.user)
+    setToken(res.token ?? null)
   }, [])
 
-  const signup = useCallback(async (payload: { email: string; password: string; remember?: boolean }) => {
-    const u = await authService.signup(payload)
-    setUser(u)
-  }, [])
+  const signup = useCallback(
+    async (payload: { firstName: string; lastName: string; email: string; password: string; remember?: boolean }) => {
+      const res = await authService.signup(payload)
+      setUser(res.user)
+      setToken(res.token ?? null)
+    },
+    [],
+  )
 
   const logout = useCallback(async () => {
     await authService.logout()
     setUser(null)
+    setToken(null)
   }, [])
 
   const value = useMemo<AuthContextValue>(() => {
     return {
       user,
+      token,
       loading,
       login,
       signup,
       logout,
       refresh,
     }
-  }, [user, loading, login, signup, logout, refresh])
+  }, [user, token, loading, login, signup, logout, refresh])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

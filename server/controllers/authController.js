@@ -32,7 +32,24 @@ function clearAuthCookie(res) {
 }
 
 function publicUser(user, isAdmin) {
-  return { id: user._id.toString(), email: user.email, isAdmin: Boolean(isAdmin) }
+  return {
+    id: user._id.toString(),
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    isAdmin: Boolean(isAdmin),
+  }
+}
+
+function isStrongPassword(password) {
+  return (
+    typeof password === 'string' &&
+    password.length >= 8 &&
+    /[a-z]/.test(password) &&
+    /[A-Z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  )
 }
 
 function signToken(payload) {
@@ -43,14 +60,22 @@ function signToken(payload) {
 
 async function signup(req, res) {
   try {
-    const { email, password, remember } = req.body ?? {}
+    const { firstName, lastName, email, password, remember } = req.body ?? {}
+
+    if (!firstName || typeof firstName !== 'string' || firstName.trim().length === 0) {
+      return res.status(400).json({ message: 'First name is required' })
+    }
+
+    if (!lastName || typeof lastName !== 'string' || lastName.trim().length === 0) {
+      return res.status(400).json({ message: 'Last name is required' })
+    }
 
     if (!email || typeof email !== 'string') {
       return res.status(400).json({ message: 'Email is required' })
     }
 
-    if (!password || typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ message: 'Password must be at least 8 characters' })
+    if (!isStrongPassword(password)) {
+      return res.status(400).json({ message: 'Password does not meet complexity requirements' })
     }
 
     const normalizedEmail = email.trim().toLowerCase()
@@ -66,13 +91,23 @@ async function signup(req, res) {
     }
 
     const passwordHash = await bcrypt.hash(password, 12)
-    const user = await User.create({ email: normalizedEmail, passwordHash })
+    const user = await User.create({
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      email: normalizedEmail,
+      passwordHash,
+    })
 
-    const token = signToken({ sub: user._id.toString(), isAdmin: false })
+    const token = signToken({
+      sub: user._id.toString(),
+      email: user.email,
+      firstName: user.firstName,
+      isAdmin: false,
+    })
 
     setAuthCookie(res, token, remember !== false)
 
-    return res.status(201).json({ user: publicUser(user, false) })
+    return res.status(201).json({ user: publicUser(user, false), token })
   } catch (err) {
     return res.status(500).json({ message: 'Failed to sign up' })
   }
@@ -94,19 +129,24 @@ async function login(req, res) {
     const user = await User.findOne({ email: normalizedEmail })
 
     if (!user) {
-      return res.status(401).json({ message: 'Invalid credentials' })
+      return res.status(401).json({ message: 'Incorrect email or password' })
     }
 
     const ok = await bcrypt.compare(password, user.passwordHash)
     if (!ok) {
-      return res.status(401).json({ message: 'Invalid credentials' })
+      return res.status(401).json({ message: 'Incorrect email or password' })
     }
 
-    const token = signToken({ sub: user._id.toString(), isAdmin: false })
+    const token = signToken({
+      sub: user._id.toString(),
+      email: user.email,
+      firstName: user.firstName,
+      isAdmin: false,
+    })
 
     setAuthCookie(res, token, remember !== false)
 
-    return res.json({ user: publicUser(user, false) })
+    return res.json({ user: publicUser(user, false), token })
   } catch (err) {
     return res.status(500).json({ message: 'Failed to log in' })
   }
@@ -124,7 +164,14 @@ async function me(req, res) {
       return res.status(401).json({ message: 'Unauthorized' })
     }
 
-    return res.json({ user: publicUser(user, req.user?.isAdmin) })
+    const token = signToken({
+      sub: user._id.toString(),
+      email: user.email,
+      firstName: user.firstName,
+      isAdmin: Boolean(req.user?.isAdmin),
+    })
+
+    return res.json({ user: publicUser(user, req.user?.isAdmin), token })
   } catch (err) {
     return res.status(500).json({ message: 'Failed to fetch session' })
   }
@@ -142,7 +189,17 @@ async function verifyAdmin(req, res) {
       return res.status(401).json({ message: 'Invalid credentials' })
     }
 
-    const token = signToken({ sub: req.user.id, isAdmin: true })
+    const user = await User.findById(req.user.id)
+    if (!user) {
+      return res.status(401).json({ message: 'Unauthorized' })
+    }
+
+    const token = signToken({
+      sub: req.user.id,
+      email: user.email,
+      firstName: user.firstName,
+      isAdmin: true,
+    })
     setAuthCookie(res, token, remember !== false)
 
     return res.json({ ok: true })

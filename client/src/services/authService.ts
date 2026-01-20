@@ -2,12 +2,15 @@ import { http } from '@/services/http'
 
 export type AuthUser = {
   id: string
+  firstName?: string
+  lastName?: string
   email: string
   isAdmin?: boolean
 }
 
 type AuthResponse = {
   user: AuthUser
+  token?: string
 }
 
 type LoginPayload = {
@@ -17,6 +20,8 @@ type LoginPayload = {
 }
 
 type SignupPayload = {
+  firstName: string
+  lastName: string
   email: string
   password: string
   remember?: boolean
@@ -29,12 +34,12 @@ type VerifyAdminPayload = {
 export const authService = {
   async signup(payload: SignupPayload) {
     const res = await http.post<AuthResponse>('/auth/signup', payload, { withCredentials: true })
-    return res.data.user
+    return { user: res.data.user, token: res.data.token }
   },
 
   async login(payload: LoginPayload) {
     const res = await http.post<AuthResponse>('/auth/login', payload, { withCredentials: true })
-    return res.data.user
+    return { user: res.data.user, token: res.data.token }
   },
 
   async logout() {
@@ -43,7 +48,7 @@ export const authService = {
 
   async me() {
     const res = await http.get<AuthResponse>('/auth/me')
-    return res.data.user
+    return { user: res.data.user, token: res.data.token }
   },
 
   async verifyAdmin(payload: VerifyAdminPayload) {
