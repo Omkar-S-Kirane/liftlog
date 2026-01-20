@@ -46,6 +46,10 @@ app.use(express.json())
 // Use a RegExp to match all paths for OPTIONS preflight.
 app.options(/.*/, cors(corsOptions))
 
+app.get('/healthz', (req, res) => {
+  return res.status(200).send('ok')
+})
+
 app.use('/auth', require('./routes/authRoutes'))
 
 const requireAuth = require('./middleware/requireAuth')
